@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8">
+<title>Leap Motion Sample 1</title>
+
+<!-- Load Leap Motion JavaScript API -->
+<script src="//js.leapmotion.com/leap-0.6.4.js"></script>
+
+<script>
+var previousPointable = null;
+var oldX = 0;
+var oldY = 0;
+
+///////////////////////////////////////////////////////////////////////////////
+/// Leap Motion Main Loop 
+///////////////////////////////////////////////////////////////////////////////
+Leap.loop({enableGestures: true}, function(frame){
+    // Get the position of Pointable(Finger)
+    var pointable = null;
+    if (frame.pointables.length > 0) {
+        pointable = frame.pointables[0];
+        for (var i = 0; i < frame.pointables.length; i++) {
+            if (previousPointable !== null && frame.pointables[i].id == previousPointable.id) {
+                pointable = frame.pointables[i];
+            }
+        }
+    }
+    
+    var pointableOutput = document.getElementById("pointableData");
+    if (pointable !== null) {
+        if (pointable.tipPosition[2] < 0) {
+            if (previousPointable === null || previousPointable.tipPosition[2] >= 0) {
+                oldX = pointable.tipPosition[0];
+                oldY = pointable.tipPosition[1];
+            }
+            draw(pointable.tipPosition[0], pointable.tipPosition[1]);
+        }
+        pointableOutput.innerHTML = "Position: " + vectorToString(pointable.tipPosition);
+        previousPointable = pointable;
+    } else {
+        pointableOutput.innerHTML = "Position: N/A";
+    }
+});
+
+///////////////////////////////////////////////////////////////////////////////
+/// HTML5 Canvas 
+///////////////////////////////////////////////////////////////////////////////
+
+// Drawing line
+function draw(x, y) {
+    var canvas = document.getElementById("myCanvas");
+    var context = canvas.getContext("2d");
+    
+    var color = document.getElementById("color").options.item(document.getElementById("color").selectedIndex).value;
+    if (color == "black") {
+        context.strokeStyle = "rgba(0,0,0,1)";
+    } else if (color == "red") {
+        context.strokeStyle = "rgba(255,0,0,1)";
+    } else if (color == "blue") {
+        context.strokeStyle = "rgba(0,0,255,1)";
+    } else {
+        context.strokeStyle = "rgba(0,0,0,1)";
+        console.log("hoge");
+    }
+    
+    var line = document.getElementById("line").options.item(document.getElementById("line").selectedIndex).value;
+    context.lineWidth = line;
+    context.beginPath();
+    context.moveTo(oldX + 320, 480 - oldY);
+    context.lineTo(x + 320, 480 - y);
+    context.stroke();
+    context.closePath();
+    oldX = x;
+    oldY = y;
+}
+
+// Clear Canvas
+function clearCanvas() {
+    var canvas = document.getElementById("myCanvas");
+    var context = canvas.getContext("2d");
+    context.clearRect(0,0,640,480);
+    console.log("Clear Canvas");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// Media
+///////////////////////////////////////////////////////////////////////////////
+var localMediaStream = null;
+
+// Check if camera is available
+var hasGetUserMedia = function() {
+	return !!(
+	    navigator.getUserMedia || navigator.webkitGetUserMedia || 
+	    navigator.mozGetUserMedia || navigator.msGetUserMedia);
+};
+
+if (hasGetUserMedia()) {
+	console.log("Camera is available.");
+} else {
+	alert("Camera is NOT available in this browser");
+}
+
+// Handle error
+var onFailSoHard = function(e) {
+	console.log('ERROR!', e);
+};
+
+window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
+navigator.getUserMedia = 
+	navigator.getUserMedia || navigator.webkitGetUserMedia ||
+	navigator.mozGetUserMedia || navigator.msGetUserMedia;
+
+navigator.getUserMedia({video: true}, function(stream) {
+    var video = document.querySelector('video');
+	video.src = window.URL.createObjectURL(stream);
+	localMediaStream = stream;
+}, onFailSoHard);
+
+///////////////////////////////////////////////////////////////////////////////
+/// etc 
+///////////////////////////////////////////////////////////////////////////////
+
+// Create string of vector data
+function vectorToString(vector, digits) {
+    if (typeof digits === "undefined") {
+        digits = 1;
+    }
+    return "("
+        + vector[0].toFixed(digits) + ", "
+        + vector[1].toFixed(digits) + ", "
+        + vector[2].toFixed(digits)
+        + ")";
+}
+</script>
+
+<style>
+    video {
+        position:absolute;
+        left:0;
+        top:0;
+        z-index:0;
+		background-color:black;
+	}
+    canvas {
+        position:absolute;
+        left:0;
+        top:0;
+        z-index:1;
+	}
+    #screen {
+        position:relative;
+        left:0;
+        top:0;
+    }
+</style>
+
+</head>
+<body>
+    <div id="pointableData"></div>
+    Color:
+    <select id="color">
+        <option value="black">Black</option>
+        <option value="red">Red</option>
+        <option value="blue">Blue</option>
+    </select>
+    Line:
+    <select id="line">
+        <option value="3">細い</option>
+        <option value="6" selected>普通</option>
+        <option value="9">太い</option>
+    </select>
+    <button onclick="clearCanvas()">Clear</button>
+    <div id="screen">
+        <video autoplay width="640" height="480"></video>
+        <canvas id="myCanvas" width="640" height="480"></canvas>
+    </div>
+</body>
+</html>
